@@ -1,0 +1,340 @@
+/******************************************************************************
+
+                              Online C++ Compiler.
+               Code, Compile, Run and Debug C++ program online.
+Write your code in this editor and press "Run" button to compile and execute it.
+
+*******************************************************************************/
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <climits>
+
+using namespace std;
+
+const int ROWS = 6;
+const int COLS = 7;
+const char EMPTY = ' ';
+const char PLAYER_X = 'X';
+const char PLAYER_O = 'O';
+
+// Función para imprimir el tablero
+void printBoard(const vector<vector<char>>& board) {
+    cout << "  1 2 3 4 5 6 7\n";
+    cout << "-----------------\n";
+    for (int i = 0; i < ROWS; ++i) {
+        cout << "|";
+        for (int j = 0; j < COLS; ++j) {
+            cout << board[i][j] << "|";
+        }
+        cout << "\n-----------------\n";
+    }
+}
+
+// Función para verificar si un movimiento es válido en una columna
+bool isValidMove(const vector<vector<char>>& board, int col) {
+    return board[0][col] == EMPTY;
+}
+
+// Función para realizar un movimiento en una columna
+void makeMove(vector<vector<char>>& board, int col, char player) {
+    for (int i = ROWS - 1; i >= 0; --i) {
+        if (board[i][col] == EMPTY) {
+            board[i][col] = player;
+            break;
+        }
+    }
+}
+
+// Función para verificar si un jugador ha ganado
+bool checkWin(const vector<vector<char>>& board, char player) {
+    // Verificar en horizontal
+    for (int i = 0; i < ROWS; ++i) {
+        for (int j = 0; j <= COLS - 4; ++j) {
+            if (board[i][j] == player && board[i][j + 1] == player && board[i][j + 2] == player && board[i][j + 3] == player) {
+                return true;
+            }
+        }
+    }
+
+    // Verificar en vertical
+    for (int i = 0; i <= ROWS - 4; ++i) {
+        for (int j = 0; j < COLS; ++j) {
+            if (board[i][j] == player && board[i + 1][j] == player && board[i + 2][j] == player && board[i + 3][j] == player) {
+                return true;
+            }
+        }
+    }
+
+    // Verificar en diagonales ascendentes
+    for (int i = 3; i < ROWS; ++i) {
+        for (int j = 0; j <= COLS - 4; ++j) {
+            if (board[i][j] == player && board[i - 1][j + 1] == player && board[i - 2][j + 2] == player && board[i - 3][j + 3] == player) {
+                return true;
+            }
+        }
+    }
+
+    // Verificar en diagonales descendentes
+    for (int i = 3; i < ROWS; ++i) {
+        for (int j = 3; j < COLS; ++j) {
+            if (board[i][j] == player && board[i - 1][j - 1] == player && board[i - 2][j - 2] == player && board[i - 3][j - 3] == player) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// Función para evaluar el estado del juego (puntaje)
+int evaluate(const vector<vector<char>>& board) {
+    if (checkWin(board, PLAYER_X)) {
+        return 1;  // Jugador 'X' gana
+    } else if (checkWin(board, PLAYER_O)) {
+        return -1; // Jugador 'O' gana
+    } else if (board[0][0] == EMPTY || board[0][1] == EMPTY || board[0][2] == EMPTY || board[0][3] == EMPTY ||
+               board[1][0] == EMPTY || board[1][1] == EMPTY || board[1][2] == EMPTY || board[1][3] == EMPTY ||
+               board[2][0] == EMPTY || board[2][1] == EMPTY || board[2][2] == EMPTY || board[2][3] == EMPTY ||
+               board[3][0] == EMPTY || board[3][1] == EMPTY || board[3][2] == EMPTY || board[3][3] == EMPTY) {
+        return 0;  // Juego no terminado
+    } else {
+        return -2;  // Empate
+    }
+}
+
+// Función Minimax con poda alfa-beta
+int minimax(vector<vector<char>>& board, int depth, int alpha, int beta, bool isMaximizer) {
+    int score = evaluate(board);
+
+    if (score == 1 || score == -1 || score == 0) {
+        return score;
+    }
+
+    if (isMaximizer) {
+        int maxEval = INT_MIN;
+        for (int col = 0; col < COLS; ++col) {
+            if (isValidMove(board, col)) {
+                makeMove(board, col, PLAYER_X);
+                int eval = minimax(board, depth + 1, alpha, beta, false);
+                board[0][col] = EMPTY; // Deshacer movimiento
+
+                maxEval = max(maxEval, eval);
+                alpha = max(alpha, eval);
+
+                if (beta <= alpha) {
+                    break; // Poda alfa-beta
+                }
+            }
+        }
+        return maxEval;
+    } else {
+        int minEval = INT_MAX;
+        for (int col = 0; col < COLS; ++col) {
+            if (isValidMove(board, col)) {
+                makeMove(board, col, PLAYER_O);
+                int eval = minimax(board, depth + 1, alpha, beta, true);
+                board[0][col] = EMPTY; // Deshacer movimiento
+
+                minEval = min(minEval, eval);
+                beta = min(beta, eval);
+
+                if (beta <= alpha) {
+                    break; // Poda alfa-beta
+                }
+            }
+        }
+        return minEval;
+    }
+}
+
+// Función para realizar el movimiento del jugador
+void playerMove(vector<vector<char>>& board) {
+    int col;
+
+    while (true) {
+        cout << "Ingrese su movimiento (columna de 1 a " << COLS << "): ";
+        cin >> col;
+
+        // Convertir a índice de columna
+        col--;
+
+        // Verificar validez del movimiento
+        if (col >= 0 && col < COLS && isValidMove(board, col)) {
+            makeMove(board, col, PLAYER_X);
+            break;
+        } else {
+            cout << "Movimiento inválido. Inténtelo de nuevo.\n";
+        }
+    }
+}
+
+// Función para realizar el movimiento de la IA
+void aiMove(vector<vector<char>>& board, int difficulty) {
+    // Dificultad: Fácil (movimiento aleatorio)
+    if (difficulty == 1) {
+        while (true) {
+            int col = rand() % COLS;
+            if (isValidMove(board, col)) {
+                makeMove(board, col, PLAYER_O);
+                break;
+            }
+        }
+    } else {
+        // Dificultad: Intermedio o Difícil (Minimax)
+        int bestMove = -1;
+        int bestEval = INT_MIN;
+
+        for (int col = 0; col < COLS; ++col) {
+            if (isValidMove(board, col)) {
+                makeMove(board, col, PLAYER_O);
+                int eval = minimax(board, 0, INT_MIN, INT_MAX, false);
+                board[0][col] = EMPTY; // Deshacer movimiento
+
+                if (eval > bestEval) {
+                    bestEval = eval;
+                    bestMove = col;
+                }
+            }
+        }
+
+        // Realizar el mejor movimiento
+        makeMove(board, bestMove, PLAYER_O);
+    }
+}
+
+// Función para guardar partida en archivo CSV
+void saveGame(const vector<vector<char>>& board, int difficulty) {
+    ofstream file("saved_game.csv");
+    if (file.is_open()) {
+        file << difficulty << "\n";
+        for (const auto& row : board) {
+            for (char cell : row) {
+                file << cell << ",";
+            }
+            file << "\n";
+        }
+        file.close();
+        cout << "Partida guardada exitosamente.\n";
+    } else {
+        cout << "Error al guardar la partida.\n";
+    }
+}
+
+// Función para cargar partida desde archivo CSV
+void loadGame(vector<vector<char>>& board, int& difficulty) {
+    ifstream file("saved_game.csv");
+    if (file.is_open()) {
+        file >> difficulty;
+        string line;
+        getline(file, line);  // Consumir la primera línea
+        int row = 0;
+        while (getline(file, line, ',')) {
+            board[row / COLS][row % COLS] = line[0];
+            row++;
+        }
+        file.close();
+        cout << "Partida cargada exitosamente.\n";
+    } else {
+        cout << "No se encontró una partida guardada.\n";
+    }
+}
+
+void miniMenu(int option){
+
+int main() {
+    srand(static_cast<unsigned>(time(0)));  // Inicializar la semilla para números aleatorios
+
+    vector<vector<char>> board(ROWS, vector<char>(COLS, EMPTY));
+    int difficulty = 0;  // 0: No jugado, 1: Fácil, 2: Intermedio, 3: Difícil
+
+    while (true) {
+        cout << "Menu:\n";
+        cout << "1. Jugar\n";
+        cout << "2. Guardar partida\n";
+        cout << "3. Cargar partida\n";
+        cout << "4. Salir\n";
+
+        int choice;
+        cout << "Seleccione una opción: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Niveles de dificultad:\n";
+                cout << "1. Fácil\n";
+                cout << "2. Intermedio\n";
+                cout << "3. Difícil\n";
+                cout << "Seleccione un nivel de dificultad: ";
+                cin >> difficulty;
+
+                // Iniciar el juego y lógica del juego aquí
+                board = vector<vector<char>>(ROWS, vector<char>(COLS, EMPTY));
+                printBoard(board);
+
+                while (true) {
+                    // Turno del jugador
+                    playerMove(board);
+                    printBoard(board);
+
+                    // Verificar si el jugador ha ganado o hay empate
+                    if (checkWin(board, PLAYER_X)) {
+                        cout << "¡Felicidades! ¡Has ganado!\n";
+                        break;
+                    } else if (evaluate(board) == -2) {
+                        cout << "¡Empate!\n";
+                        break;
+                    }
+                    
+                    cout << "1. Seguir\n";
+                    cout << "2. Guardar partida\n";
+                    int option;
+                    cout << "Seleccione una opción: ";
+                    cin >> option;
+                    miniMenu(option);
+                    if(option==1){
+                       // Turno de la IA
+                    cout << "Turno de la CPU...\n";
+                    aiMove(board, difficulty);
+                    printBoard(board);
+
+                        // Verificar si la IA ha ganado o hay empate
+                        if (checkWin(board, PLAYER_O)) {
+                        cout << "La CPU ha ganado. ¡Inténtalo de nuevo!\n";
+                        break;
+                        }
+                        else if (evaluate(board) == -2) {
+                        cout << "¡Empate!\n";
+                        break;
+                        } 
+                        
+                    }
+                    
+                    else if(option==2){
+                        saveGame(board, difficulty);
+                    }
+                    else{
+                        cout<<"OPCION NO VALIDA"<<endl;
+                    }
+                    
+                    
+                }
+                break;
+            case 2:
+                saveGame(board, difficulty);
+                break;
+            case 3:
+                loadGame(board, difficulty);
+                break;
+            case 4:
+                cout << "Saliendo del juego.\n";
+                return 0;
+            default:
+                cout << "Opción no válida. Inténtelo de nuevo.\n";
+                break;
+        }
+    }
+
+    return 0;
+}
